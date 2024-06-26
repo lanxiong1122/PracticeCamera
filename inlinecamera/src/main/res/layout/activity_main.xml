@@ -19,5 +19,11 @@
         android:onClick="onCancel"
         android:text="取消"
         />
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="onTest"
+        android:text="测试"
+        />
 
 </LinearLayout>

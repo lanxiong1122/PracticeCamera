@@ -24,7 +24,6 @@ void proxy(CameraInstance camera)
 {
     // 在调用原始函数之前执行的操作
     __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, "Before calling startPreview");
-    __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG,"Before calling startPreview\n");
 
     // 调用原始的startPreview函数
     ((type_t)orig)(camera);

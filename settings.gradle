@@ -11,5 +11,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "PracticeCamera"
-include ':newcamera'
 include ':inlinecamera'
