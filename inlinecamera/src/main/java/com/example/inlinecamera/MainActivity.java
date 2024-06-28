@@ -4,14 +4,10 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.hardware.Camera;
-import android.hardware.SensorManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-
 import androidx.appcompat.app.AppCompatActivity;
-
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileOutputStream;
@@ -19,18 +15,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
-import android.graphics.SurfaceTexture;
-import android.hardware.Camera;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 // _ZN7android6Camera12startPreviewEv   64位相机的startPreview
@@ -47,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
         MySdk.init();
 
         // 执行命令
-        // otherExe();
+         otherExe();
     }
     // 确定
     public void onGo(View view){
@@ -57,12 +46,32 @@ public class MainActivity extends AppCompatActivity {
     public void onCancel(View view){
         myLib.cancelPreview();
     }
+    public void onLoadSo(View view){
+       // myLib.loadAndExecuteMain(android.os.Process.myPid());
+
+        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,Manifest.permission.READ_EXTERNAL_STORAGE}, 200);
+        }else {
+            runLocalRootUserCommand("mount -o remount,rw /system");
+            runLocalRootUserCommand("chmod 777 /data/local/tmp/");
+            //runLocalRootUserCommand("chmod 777 /system/lib/");
+            copyDataToExePath("libgo.so", "/data/local/tmp/libgo.so");
+            copyDataToExePath("go.sh", "/data/local/tmp/go.sh");
+            runLocalRootUserCommand(" sh /data/local/tmp/go.sh");
+        }
+    }
     public void onTest(View view){
         try {
             if (checkSelfPermission(Manifest.permission.CAMERA)
                     != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.CAMERA}, 100);
             } else {
+                // 每次重启释放
+                if (mCameraHelper != null){
+                    mCameraHelper.onDestroy();
+                }
                // getCameraSupportedSize();
                 // Create SurfaceView and add it to the layout
                 if (mSurfaceView == null) mSurfaceView = new SurfaceView(this);
@@ -192,9 +201,11 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
     }
-    private void copyDataToExePath(String srcFileName, String strOutFileName) throws IOException {
+    private void copyDataToExePath(String srcFileName, String strOutFileName) {
         InputStream myInput;
-        OutputStream myOutput = new FileOutputStream(strOutFileName);
+        OutputStream myOutput = null;
+        try {
+            myOutput = new FileOutputStream(strOutFileName);
         myInput = getAssets().open(srcFileName);
         byte[] buffer = new byte[1024];
         int length = myInput.read(buffer);
@@ -205,6 +216,9 @@ public class MainActivity extends AppCompatActivity {
         myOutput.flush();
         myInput.close();
         myOutput.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     // 4
     public void getCameraSupportedSize()
@@ -239,12 +253,13 @@ public class MainActivity extends AppCompatActivity {
         return runLocalRootUserCommand(exeCmd);
     }
 
+
 }
 
-
+// 打开预览相机
 class CameraHelper implements SurfaceHolder.Callback {
 
-    private static final String TAG = "CameraHelper";
+    private static final String TAG = "CustomCamera";
 
     private Camera mCamera;
     private SurfaceView mSurfaceView;
@@ -273,7 +288,13 @@ class CameraHelper implements SurfaceHolder.Callback {
         Log.d(TAG, "surfaceChanged - format: " + format + ", width: " + width + ", height: " + height);
         // Adjust camera parameters if needed based on the new dimensions
     }
-
+/*
+要实现替换相机预览数据，
+你需要hook的方法是libcamera.so   _ZN7android6Camera25setPreviewCallbackWithBufferEPNS_14CameraListenerE
+ Camera.setPreviewCallbackWithBuffer(Camera.PreviewCallback cb)。
+这个方法允许你注册一个回调函数，当预览帧数据准备好时，
+系统会调用该回调函数，
+你可以在回调函数中处理这些预览帧数据。*/
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         Log.d(TAG, "surfaceDestroyed");
@@ -307,6 +328,19 @@ class CameraHelper implements SurfaceHolder.Callback {
             parameters.setPreviewSize(previewSize.width, previewSize.height);
             Log.d(TAG, "Setting preview size: " + previewSize.width + "x" + previewSize.height);
         }
+        // setPreviewCallbackWithBuffer结合addCallbackBuffer才会有回调
+        //int bufferSize = parameters.getPreviewSize().width * parameters.getPreviewSize().height * ImageFormat.getBitsPerPixel(parameters.getPreviewFormat()) / 8;
+        //mCamera.addCallbackBuffer(new byte[bufferSize]);
+        mCamera.setPreviewCallback(new Camera.PreviewCallback() {
+            @Override
+            public void onPreviewFrame(byte[] data, Camera camera) {
+                // 处理预览帧数据
+                //mCamera.addCallbackBuffer(data);
+
+                // 在这里对 data 进行处理，比如保存到文件、进行图像处理等
+                //Log.d(TAG, "onPreviewFrame: frame received, data length = " + data.length);
+            }
+        });
 
         try {
             mCamera.setParameters(parameters);

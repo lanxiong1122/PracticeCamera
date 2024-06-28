@@ -38,6 +38,13 @@ android {
             version "3.22.1"
         }
     }
+    sourceSets {
+        main {
+            assets {
+                srcDirs 'src/main/assets'
+            }
+        }
+    }
 //    packagingOptions {
 //        pickFirst '**/libshadowhook.so'
 //    }

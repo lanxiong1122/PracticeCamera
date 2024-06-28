@@ -8,4 +8,5 @@ public class MyLib {
 
     public native void startPreview();
     public native void cancelPreview();
+    public native void loadAndExecuteMain(int pid);
 }

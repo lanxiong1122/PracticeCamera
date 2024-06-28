@@ -11,3 +11,8 @@ set(TARGET "mylib")
 add_library(mylib SHARED mylib.c)
 target_link_libraries(mylib shadowhook::shadowhook)
 target_link_libraries(${TARGET} log)
+
+set(TARGET "go")
+add_library(go SHARED  go.c)
+target_link_libraries(go shadowhook::shadowhook)
+target_link_libraries(${TARGET} log)
